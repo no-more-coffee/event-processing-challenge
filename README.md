@@ -5,8 +5,8 @@ process to get an insight into casino performance and player activity.
 
 For this assignment, you will need to implement a set of components that:
 
-- [ ] publish generated events,
-- [ ] subscribe to these events,
+- [x] publish generated events,
+- [x] subscribe to these events,
 - [ ] enrich them using data from various sources (HTTP API, database, and in-memory mapping),
   - [ ] common currency,
   - [ ] player data,
