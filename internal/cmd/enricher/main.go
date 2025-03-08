@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/casino"
-	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher"
+	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher/currencies"
 )
 
 func main() {
@@ -16,9 +16,9 @@ func main() {
 		panic("env var unset: API_KEY")
 	}
 
-	log.Println(enricher.ConvertCurrency(
+	log.Println(currencies.ConvertCurrency(
 		context.TODO(),
-		enricher.ExchangeApiHttp{
+		currencies.ExchangeApiHttp{
 			BaseUrl:    "http://api.exchangerate.host/live",
 			ApiKey:     apiKey,
 			Currencies: strings.Join(casino.Currencies, ","),

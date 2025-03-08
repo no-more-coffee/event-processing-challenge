@@ -37,6 +37,7 @@ type RedisPublisher struct {
 	Db *redis.Client
 }
 
+// Ensure implementation
 var _ Publisher = (*RedisPublisher)(nil)
 
 type Event struct{ casino.Event }
