@@ -8,7 +8,38 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/Bitstarz-eng/event-processing-challenge/internal/casino"
 )
+
+func RunCurrencies(
+	ctx context.Context,
+	exchangeApi ExchangeApi,
+	in <-chan casino.Event,
+	out chan<- casino.Event,
+) error {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("RunCurrencies Done")
+			return nil
+		case event := <-in:
+			log.Println("in RunCurrencies received", event)
+			amountEur, err := ConvertCurrency(
+				ctx,
+				exchangeApi,
+				float32(event.Amount),
+				event.Currency,
+			)
+			if err != nil {
+				return err
+			}
+			event.AmountEUR = amountEur
+
+			out <- event
+		}
+	}
+}
 
 func ConvertCurrency(
 	ctx context.Context,
@@ -93,7 +124,7 @@ type ExchangeApiMock struct{}
 var _ ExchangeApi = (*ExchangeApiMock)(nil)
 
 func (e ExchangeApiMock) Fetch(ctx context.Context) (Rates, error) {
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	return Rates{
 		Quotes: map[string]float32{
 			"EURBTC": 1.2553402e-05,

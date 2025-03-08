@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/casino"
@@ -21,6 +22,7 @@ var ctx = context.Background()
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	redisAddr, ok := os.LookupEnv("REDIS_ADDR")
 	if !ok {
 		panic("env var unset: REDIS_ADDR")
@@ -28,8 +30,6 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
-
-	eventCh := generator.Generate(ctx)
 
 	dsn, ok := os.LookupEnv("PG_DSN")
 	if !ok {
@@ -40,39 +40,96 @@ func main() {
 		panic(err)
 	}
 
-	for event := range eventCh {
-		if err := AddPlayerData(
-			ctx,
-			// PlayerDataMock{},
-			PlayerDataPg{
-				Db: db,
-			},
-			&event,
-		); err != nil {
-			panic(err)
-		}
+	var wg sync.WaitGroup
+	genCh := make(chan casino.Event, 1000)
+	pgCh := make(chan casino.Event, 1000)
+	pubCh := make(chan casino.Event, 1000)
 
-		amountEur, err := enricher.ConvertCurrency(
-			ctx,
-			enricher.ExchangeApiMock{},
-			float32(event.Amount),
-			event.Currency,
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		log.Println(
+			enricher.RunCurrencies(
+				ctx,
+				enricher.ExchangeApiMock{},
+				genCh,
+				pgCh,
+			),
 		)
-		if err != nil {
-			panic(err)
-		}
-		event.AmountEUR = amountEur
+	}()
 
-		if err := publisher.Publish(ctx, rdb, "events", event); err != nil {
-			panic(err)
-		}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		log.Println(
+			RunPlayerData(
+				ctx,
+				// PlayerDataMock{},
+				PlayerDataPg{
+					Db: db,
+				},
+				pgCh,
+				pubCh,
+			),
+		)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		log.Println(
+			publisher.RunPublish(
+				ctx,
+				publisher.RedisPublisher{
+					Db: rdb,
+				},
+				pubCh,
+			),
+		)
+	}()
+
+	eventCh := generator.Generate(ctx)
+
+	for event := range eventCh {
+		genCh <- event
 	}
 
+	wg.Wait()
 	log.Println("finished")
 }
 
 type PlayerData interface {
 	Find(playerId int) (casino.Player, error)
+}
+
+func RunPlayerData(
+	ctx context.Context,
+	playerData PlayerData,
+	in <-chan casino.Event,
+	out chan<- casino.Event,
+) error {
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("RunPlayerData Done")
+			return nil
+		case event := <-in:
+			log.Println("in RunPlayerData received", event)
+			if err := AddPlayerData(
+				ctx,
+				playerData,
+				&event,
+			); err != nil {
+				panic(err)
+			}
+
+			out <- event
+		}
+	}
 }
 
 func AddPlayerData(ctx context.Context, dbData PlayerData, event *casino.Event) error {
