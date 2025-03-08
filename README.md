@@ -7,12 +7,12 @@ For this assignment, you will need to implement a set of components that:
 
 - [x] publish generated events,
 - [x] subscribe to these events,
-- [ ] enrich them using data from various sources (HTTP API, database, and in-memory mapping),
-  - [ ] common currency,
-  - [ ] player data,
-  - [ ] human-friendly description,
+- [x] enrich them using data from various sources (HTTP API, database, and in-memory mapping),
+  - [x] common currency,
+  - [x] player data,
+  - [x] human-friendly description,
 - [ ] materialize various aggregates,
-- [ ] output events as logs.
+- [x] output events as logs.
 
 ## Setup
 

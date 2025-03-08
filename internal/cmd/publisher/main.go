@@ -57,6 +57,20 @@ func main() {
 	curCh := make(chan casino.Event, 1000)
 	pgCh := make(chan casino.Event, 1000)
 	pubCh := make(chan casino.Event, 1000)
+	descCh := make(chan casino.Event, 1000)
+
+	wg.Add(1)
+	go func(parent context.Context) {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+		defer cancel()
+
+		eventCh := generator.Generate(ctx)
+
+		for event := range eventCh {
+			curCh <- event
+		}
+	}(parentCtx)
 
 	wg.Add(1)
 	go func() {
@@ -80,6 +94,19 @@ func main() {
 			ctx,
 			pgDb,
 			pgCh,
+			descCh,
+		); err != nil {
+			panic(err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		if err := enricher.RunDescription(
+			ctx,
+			descCh,
 			pubCh,
 		); err != nil {
 			panic(err)
@@ -98,19 +125,6 @@ func main() {
 			panic(err)
 		}
 	}()
-
-	wg.Add(1)
-	go func(parent context.Context) {
-		defer wg.Done()
-		ctx, cancel := context.WithTimeout(parent, 5*time.Second)
-		defer cancel()
-
-		eventCh := generator.Generate(ctx)
-
-		for event := range eventCh {
-			curCh <- event
-		}
-	}(parentCtx)
 
 	wg.Wait()
 	log.Println("finished")
