@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -30,6 +31,9 @@ func main() {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
+	rPub := publisher.RedisPublisher{
+		Db: rdb,
+	}
 
 	dsn, ok := os.LookupEnv("PG_DSN")
 	if !ok {
@@ -38,6 +42,16 @@ func main() {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic(err)
+	}
+	// pgDb :=PlayerDataMock{}
+	pgDb := PlayerDataPg{
+		Db: db,
+	}
+
+	cachedApi := CachedApi{
+		ExchangeApi: enricher.ExchangeApiMock{},
+		timeout:     3 * time.Second,
+		Db:          rdb,
 	}
 
 	var wg sync.WaitGroup
@@ -52,7 +66,7 @@ func main() {
 		log.Println(
 			enricher.RunCurrencies(
 				ctx,
-				enricher.ExchangeApiMock{},
+				cachedApi,
 				genCh,
 				pgCh,
 			),
@@ -66,10 +80,7 @@ func main() {
 		log.Println(
 			RunPlayerData(
 				ctx,
-				// PlayerDataMock{},
-				PlayerDataPg{
-					Db: db,
-				},
+				pgDb,
 				pgCh,
 				pubCh,
 			),
@@ -83,9 +94,7 @@ func main() {
 		log.Println(
 			publisher.RunPublish(
 				ctx,
-				publisher.RedisPublisher{
-					Db: rdb,
-				},
+				rPub,
 				pubCh,
 			),
 		)
@@ -103,6 +112,56 @@ func main() {
 
 type PlayerData interface {
 	Find(playerId int) (casino.Player, error)
+}
+
+type CachedApi struct {
+	enricher.ExchangeApi
+	timeout time.Duration
+	Db      *redis.Client
+}
+
+func (e CachedApi) Fetch(ctx context.Context) (enricher.Rates, error) {
+	var rates enricher.Rates
+	key := "cached"
+
+	// Try cache
+	values, err := e.Db.HGetAll(ctx, key).Result()
+	if err != nil {
+		return rates, err
+	}
+	if len(values) > 0 {
+		rates.Quotes = make(map[string]float32)
+		for k, v := range values {
+			num, err := strconv.ParseFloat(v, 32)
+			if err != nil {
+				return rates, err
+			}
+			rates.Quotes[k] = float32(num)
+		}
+		log.Println("Using cached rates")
+		return rates, nil
+	}
+
+	// Do request
+	log.Println("Fetching rates")
+	rates, err = e.ExchangeApi.Fetch(ctx)
+	if err != nil {
+		return rates, err
+	}
+
+	// Update cache
+	values = make(map[string]string)
+	for k, v := range rates.Quotes {
+		values[k] = strconv.FormatFloat(float64(v), 'f', 2, 32)
+	}
+	if err := e.Db.HSet(ctx, key, values).Err(); err != nil {
+		return rates, err
+	}
+	if err := e.Db.Expire(ctx, key, e.timeout).Err(); err != nil {
+		return rates, err
+	}
+
+	return rates, nil
 }
 
 func RunPlayerData(

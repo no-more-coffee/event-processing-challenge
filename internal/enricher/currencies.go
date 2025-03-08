@@ -18,12 +18,14 @@ func RunCurrencies(
 	in <-chan casino.Event,
 	out chan<- casino.Event,
 ) error {
+
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("RunCurrencies Done")
 			return nil
 		case event := <-in:
+			// Blocks here to allow only single request
 			log.Println("in RunCurrencies received", event)
 			amountEur, err := ConvertCurrency(
 				ctx,
@@ -73,16 +75,16 @@ type ExchangeApi interface {
 	Fetch(context.Context) (Rates, error)
 }
 
-type ExchangeApiReal struct {
+type ExchangeApiHttp struct {
 	BaseUrl    string
 	ApiKey     string
 	Currencies string
 }
 
 // Ensure implementation
-var _ ExchangeApi = (*ExchangeApiReal)(nil)
+var _ ExchangeApi = (*ExchangeApiHttp)(nil)
 
-func (e ExchangeApiReal) Fetch(ctx context.Context) (Rates, error) {
+func (e ExchangeApiHttp) Fetch(ctx context.Context) (Rates, error) {
 	var rates Rates
 
 	u, err := url.Parse(e.BaseUrl)

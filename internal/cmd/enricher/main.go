@@ -18,7 +18,7 @@ func main() {
 
 	log.Println(enricher.ConvertCurrency(
 		context.TODO(),
-		enricher.ExchangeApiReal{
+		enricher.ExchangeApiHttp{
 			BaseUrl:    "http://api.exchangerate.host/live",
 			ApiKey:     apiKey,
 			Currencies: strings.Join(casino.Currencies, ","),
