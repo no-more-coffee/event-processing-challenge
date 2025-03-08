@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "terms": "https:\/\/currencylayer.com\/terms",
+  "privacy": "https:\/\/currencylayer.com\/privacy",
+  "timestamp": 1741441811,
+  "source": "EUR",
+  "quotes": {
+    "EURGBP": 0.839814,
+    "EURUSD": 1.083654,
+    "EURNZD": 1.897568,
+    "EURBTC": 1.2553402e-5
+  }
+}

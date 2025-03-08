@@ -22,7 +22,7 @@ func Publish(
 	event casino.Event,
 ) error {
 	if err := rdb.Publish(ctx, channel, Event{event}).Err(); err != nil {
-		return fmt.Errorf("Publish: %w", err)
+		return fmt.Errorf("publish: %w", err)
 	}
 
 	return nil

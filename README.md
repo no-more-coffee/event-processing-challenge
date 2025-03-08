@@ -154,3 +154,7 @@ GET http://localhost/materialized
 ## Output
 
 Log the events in their final form to standard output. Logs should be in JSON format and use the same keys as the `Event` type.
+
+# Issues
+
+- https://api.exchangerate.host/latest endpoint does not exist. Only https://api.exchangerate.host/live
