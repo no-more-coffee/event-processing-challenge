@@ -10,12 +10,6 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Event struct{ casino.Event }
-
-func (e Event) MarshalBinary() ([]byte, error) {
-	return json.Marshal(e)
-}
-
 func RunPublish(
 	ctx context.Context,
 	publisher Publisher,
@@ -44,6 +38,12 @@ type RedisPublisher struct {
 }
 
 var _ Publisher = (*RedisPublisher)(nil)
+
+type Event struct{ casino.Event }
+
+func (e Event) MarshalBinary() ([]byte, error) {
+	return json.Marshal(e)
+}
 
 func (p RedisPublisher) Publish(
 	ctx context.Context,

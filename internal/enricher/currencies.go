@@ -30,7 +30,7 @@ func RunCurrencies(
 			amountEur, err := ConvertCurrency(
 				ctx,
 				exchangeApi,
-				float32(event.Amount),
+				float64(event.Amount),
 				event.Currency,
 			)
 			if err != nil {
@@ -46,9 +46,9 @@ func RunCurrencies(
 func ConvertCurrency(
 	ctx context.Context,
 	api ExchangeApi,
-	value float32,
+	value float64,
 	currency string,
-) (float32, error) {
+) (float64, error) {
 	if currency == "EUR" {
 		return value, nil
 	}
@@ -68,7 +68,7 @@ func ConvertCurrency(
 }
 
 type Rates struct {
-	Quotes map[string]float32 `json:"quotes"`
+	Quotes map[string]float64 `json:"quotes"`
 }
 
 type ExchangeApi interface {
@@ -128,7 +128,7 @@ var _ ExchangeApi = (*ExchangeApiMock)(nil)
 func (e ExchangeApiMock) Fetch(ctx context.Context) (Rates, error) {
 	time.Sleep(100 * time.Millisecond)
 	return Rates{
-		Quotes: map[string]float32{
+		Quotes: map[string]float64{
 			"EURBTC": 1.2553402e-05,
 			"EURGBP": 0.839814,
 			"EURNZD": 1.897485,

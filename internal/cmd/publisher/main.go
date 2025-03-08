@@ -18,10 +18,9 @@ import (
 	"gorm.io/gorm"
 )
 
-var ctx = context.Background()
-
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	parentCtx := context.Background()
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 	defer cancel()
 
 	redisAddr, ok := os.LookupEnv("REDIS_ADDR")
@@ -55,7 +54,7 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	genCh := make(chan casino.Event, 1000)
+	curCh := make(chan casino.Event, 1000)
 	pgCh := make(chan casino.Event, 1000)
 	pubCh := make(chan casino.Event, 1000)
 
@@ -63,48 +62,55 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		log.Println(
-			enricher.RunCurrencies(
-				ctx,
-				cachedApi,
-				genCh,
-				pgCh,
-			),
-		)
+		if err := enricher.RunCurrencies(
+			ctx,
+			cachedApi,
+			curCh,
+			pgCh,
+		); err != nil {
+			panic(err)
+		}
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		log.Println(
-			RunPlayerData(
-				ctx,
-				pgDb,
-				pgCh,
-				pubCh,
-			),
-		)
+		if err := RunPlayerData(
+			ctx,
+			pgDb,
+			pgCh,
+			pubCh,
+		); err != nil {
+			panic(err)
+		}
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		log.Println(
-			publisher.RunPublish(
-				ctx,
-				rPub,
-				pubCh,
-			),
-		)
+		if err := publisher.RunPublish(
+			ctx,
+			rPub,
+			pubCh,
+		); err != nil {
+			panic(err)
+		}
 	}()
 
-	eventCh := generator.Generate(ctx)
+	wg.Add(1)
+	go func(parent context.Context) {
+		defer wg.Done()
+		ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+		defer cancel()
 
-	for event := range eventCh {
-		genCh <- event
-	}
+		eventCh := generator.Generate(ctx)
+
+		for event := range eventCh {
+			curCh <- event
+		}
+	}(parentCtx)
 
 	wg.Wait()
 	log.Println("finished")
@@ -130,13 +136,13 @@ func (e CachedApi) Fetch(ctx context.Context) (enricher.Rates, error) {
 		return rates, err
 	}
 	if len(values) > 0 {
-		rates.Quotes = make(map[string]float32)
+		rates.Quotes = make(map[string]float64)
 		for k, v := range values {
-			num, err := strconv.ParseFloat(v, 32)
+			num, err := strconv.ParseFloat(v, 64)
 			if err != nil {
 				return rates, err
 			}
-			rates.Quotes[k] = float32(num)
+			rates.Quotes[k] = float64(num)
 		}
 		log.Println("Using cached rates")
 		return rates, nil
@@ -152,7 +158,7 @@ func (e CachedApi) Fetch(ctx context.Context) (enricher.Rates, error) {
 	// Update cache
 	values = make(map[string]string)
 	for k, v := range rates.Quotes {
-		values[k] = strconv.FormatFloat(float64(v), 'f', 2, 32)
+		values[k] = strconv.FormatFloat(float64(v), 'g', 2, 64)
 	}
 	if err := e.Db.HSet(ctx, key, values).Err(); err != nil {
 		return rates, err
@@ -178,15 +184,18 @@ func RunPlayerData(
 			return nil
 		case event := <-in:
 			log.Println("in RunPlayerData received", event)
-			if err := AddPlayerData(
-				ctx,
-				playerData,
-				&event,
-			); err != nil {
-				panic(err)
-			}
 
-			out <- event
+			go func() {
+				if err := AddPlayerData(
+					ctx,
+					playerData,
+					&event,
+				); err != nil {
+					panic(err)
+				}
+
+				out <- event
+			}()
 		}
 	}
 }

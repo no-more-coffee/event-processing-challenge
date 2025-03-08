@@ -31,7 +31,7 @@ type Event struct {
 
 	CreatedAt time.Time `json:"created_at"`
 
-	AmountEUR   float32 `json:"amount_eur,omitempty"`
+	AmountEUR   float64 `json:"amount_eur,omitempty"`
 	Player      *Player `json:"player,omitempty"`
 	Description string  `json:"description"`
 }
