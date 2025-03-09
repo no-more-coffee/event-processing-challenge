@@ -63,7 +63,7 @@ func TestAddPlayerData(t *testing.T) {
 				assert.Nil(t, tc.event.Player)
 			} else {
 				if assert.NotNil(t, tc.event.Player) {
-					assert.Equal(t, *tc.event.Player, *tc.expected)
+					assert.Equal(t, *tc.expected, *tc.event.Player)
 				}
 			}
 		})
