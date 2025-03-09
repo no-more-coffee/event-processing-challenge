@@ -1,4 +1,4 @@
-package enricher
+package description
 
 import (
 	"context"

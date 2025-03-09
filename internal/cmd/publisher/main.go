@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/casino"
-	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher"
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher/currencies"
+	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher/description"
+	"github.com/Bitstarz-eng/event-processing-challenge/internal/enricher/playerdata"
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/generator"
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/publisher"
 
@@ -43,8 +44,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// pgDb :=enricher.PlayerDataMock{}
-	pgDb := enricher.PlayerDataPg{
+	pgDb := playerdata.PlayerDataPg{
 		Db: db,
 	}
 
@@ -57,7 +57,6 @@ func main() {
 		ApiKey:     apiKey,
 		Currencies: strings.Join(casino.Currencies, ","),
 	}
-	// exchangeApi := currencies.ExchangeApiMock{}
 	cachedApi := currencies.CachedApi{
 		ExchangeApi: exchangeApi,
 		Timeout:     5 * time.Second,
@@ -101,7 +100,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		if err := enricher.RunPlayerData(
+		if err := playerdata.RunPlayerData(
 			ctx,
 			pgDb,
 			pgCh,
@@ -115,7 +114,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		if err := enricher.RunDescription(
+		if err := description.RunDescription(
 			ctx,
 			descCh,
 			pubCh,

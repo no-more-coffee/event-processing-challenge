@@ -1,10 +1,9 @@
-package enricher
+package playerdata
 
 import (
 	"context"
 	"errors"
 	"log"
-	"time"
 
 	"github.com/Bitstarz-eng/event-processing-challenge/internal/casino"
 	"gorm.io/gorm"
@@ -59,36 +58,4 @@ func AddPlayerData(ctx context.Context, dbData PlayerData, event *casino.Event) 
 	// Store DB data into Event field
 	event.Player = &player
 	return nil
-}
-
-type PlayerDataPg struct {
-	Db *gorm.DB
-}
-
-// implements PlayerData
-var _ PlayerData = (*PlayerDataPg)(nil)
-
-func (p PlayerDataPg) Find(playerId int) (casino.Player, error) {
-	var player casino.Player
-	if tx := p.Db.Take(&player, playerId); tx.Error != nil {
-		return player, tx.Error
-	}
-
-	return player, nil
-}
-
-type PlayerDataMock struct{}
-
-// implements PlayerData
-var _ PlayerData = (*PlayerDataMock)(nil)
-
-func (p PlayerDataMock) Find(playerId int) (casino.Player, error) {
-	if playerId > 9 && playerId < 15 {
-		return casino.Player{
-			ID:             playerId,
-			Email:          "1@1.com",
-			LastSignedInAt: time.Now(),
-		}, nil
-	}
-	return casino.Player{}, gorm.ErrRecordNotFound
 }
