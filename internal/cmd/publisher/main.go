@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -47,9 +48,19 @@ func main() {
 		Db: db,
 	}
 
+	apiKey, ok := os.LookupEnv("API_KEY")
+	if !ok {
+		panic("env var unset: API_KEY")
+	}
+	exchangeApi := currencies.ExchangeApiHttp{
+		BaseUrl:    "http://api.exchangerate.host/live",
+		ApiKey:     apiKey,
+		Currencies: strings.Join(casino.Currencies, ","),
+	}
+	// exchangeApi := currencies.ExchangeApiMock{}
 	cachedApi := currencies.CachedApi{
-		ExchangeApi: currencies.ExchangeApiMock{},
-		Timeout:     3 * time.Second,
+		ExchangeApi: exchangeApi,
+		Timeout:     5 * time.Second,
 		Db:          rdb,
 	}
 

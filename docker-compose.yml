@@ -1,14 +1,37 @@
-version: "3.8"
 
 services:
   generator:
-    image: golang:1.17-alpine
+    image: golang:1.23-alpine
     working_dir: /app
     command: ["go", "run", "internal/cmd/generator/main.go"]
     volumes:
       - ".:/app"
     profiles:
       - manual
+
+  publisher:
+    image: golang:1.23-alpine
+    working_dir: /app
+    command: ["go", "run", "internal/cmd/publisher/main.go"]
+    volumes:
+      - ".:/app"
+    profiles:
+      - manual
+    environment:
+      - REDIS_ADDR=${REDIS_ADDR}
+      - PG_DSN=${PG_DSN}
+      - API_KEY=${API_KEY}
+
+  subscriber:
+    image: golang:1.23-alpine
+    working_dir: /app
+    command: ["go", "run", "internal/cmd/subscriber/main.go"]
+    volumes:
+      - ".:/app"
+    profiles:
+      - manual
+    environment:
+      - REDIS_ADDR=${REDIS_ADDR}
 
   database:
     image: postgres:14-alpine
@@ -17,3 +40,8 @@ services:
       - POSTGRES_PASSWORD=casino
     volumes:
       - "./db:/db"
+    ports:
+      - 5433:5432
+
+  redis:
+    image: redis:7.4-alpine
