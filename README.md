@@ -157,4 +157,5 @@ Log the events in their final form to standard output. Logs should be in JSON fo
 
 # Issues
 
-- https://api.exchangerate.host/latest endpoint does not exist. Only https://api.exchangerate.host/live
+- Endpoint https://api.exchangerate.host/latest does not exist. 
+  - This one does: https://api.exchangerate.host/live.
