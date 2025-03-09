@@ -11,7 +11,7 @@ For this assignment, you will need to implement a set of components that:
   - [x] common currency,
   - [x] player data,
   - [x] human-friendly description,
-- [ ] materialize various aggregates,
+- [ ] materialize various aggregates, (not implemented. But the task seems to boil down to configuring Prometheus metrics.)
 - [x] output events as logs.
 
 ## Setup
