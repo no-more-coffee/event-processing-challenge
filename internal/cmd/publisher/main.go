@@ -59,7 +59,7 @@ func main() {
 	}
 	cachedApi := currencies.CachedApi{
 		ExchangeApi: exchangeApi,
-		Timeout:     5 * time.Second,
+		Timeout:     3 * time.Second,
 		Db:          rdb,
 	}
 
